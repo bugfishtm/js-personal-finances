@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<title>Finance Dashboard</title>
+<!-- META INJECTION START -->
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="subject" content="personal finance tool">
+<meta name="copyright" content="bugfish">
+<meta name="language" content="en">
+<meta name="robots" content="index,follow">
+<meta name="author" content="bugfish, ynvnzmlzaa@gmail.com">
+<meta name="description" content="A private single-file personal finance dashboard. Track recurring income and expenses, one-time payments, irregular bills, loans and debts — with live charts and full JSON import/export. No backend, no login.">
+<meta property="og:title" content="Finance Dashboard">
+<meta property="og:description" content="A private single-file personal finance dashboard. Track recurring income and expenses, one-time payments, irregular bills, loans and debts — with live charts and full JSON import/export. No backend, no login.">
+<meta property="og:image" content="/meta.jpg">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bugfishtm.github.io/js-personal-finances/">
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "WebSite",
+  "name": "Finance Dashboard",
+  "url": "https://bugfishtm.github.io/js-personal-finances/"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Finance Dashboard",
+  "headline": "Finance Dashboard — Private Personal Finance Manager",
+  "description": "A private single-file personal finance dashboard. Track recurring income and expenses, one-time payments, irregular bills, loans and debts — with live charts and full JSON import/export. No backend, no login.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any (browser-based)",
+  "datePublished": "2026-05-23",
+  "dateModified": "2026-05-23",
+  "author": {
+    "@type": "Person",
+    "name": "Jan-Maurice Dahlmanns"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Bugfish",
+    "logo": {
+      "@type": "ImageObject",
+	  "url": "/logo.jpg"
+    }
+  }
+}
+</script>
+<!-- META INJECTION END -->
+<script src="./jquery-3.7.1.min.js"></script>
+<script src="./chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:     #0d0f18;
+  --bg2:    #12141f;
+  --card:   #161928;
+  --card2:  #1c1f30;
+  --border: #252836;
+  --bord2:  #2d3147;
+  --text:   #e2e4f0;
+  --text2:  #8b8fa8;
+  --text3:  #555872;
+  --blue:   #4f90f5;
+  --green:  #22c55e;
+  --red:    #ef4444;
+  --yellow: #f59e0b;
+  --purple: #a855f7;
+  --orange: #f97316;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',Consolas,monospace;font-size:13px;line-height:1.5;}
+
+/* NAV */
+.nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;position:sticky;top:0;z-index:100;overflow-x:auto;}
+.nav-brand{font-size:14px;font-weight:700;color:var(--blue);padding:14px 20px 14px 0;border-right:1px solid var(--border);margin-right:10px;white-space:nowrap;}
+.nav-tab{padding:14px 14px;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+
+/* LAYOUT */
+.content{padding:20px;max-width:1600px;margin:0 auto;}
+.tab-pane{display:none;}.tab-pane.active{display:block;}
+.subtab-pane{display:none;}.subtab-pane.active{display:block;}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:20px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;}
+.kpi-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.kpi-value{font-size:20px;font-weight:700;}
+.kpi-value.pos{color:var(--green);}.kpi-value.neg{color:var(--red);}.kpi-value.neu{color:var(--blue);}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+
+/* CHARTS */
+.charts-row{display:grid;gap:12px;margin-bottom:20px;}
+.charts-row.c2{grid-template-columns:3fr 2fr;}
+.charts-row.c2b{grid-template-columns:2fr 1fr;}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;}
+.chart-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;}
+.chart-wrap{position:relative;height:210px;}
+
+/* MONTH NAV */
+.month-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.month-display{font-size:15px;font-weight:600;min-width:160px;text-align:center;}
+.view-toggle{margin-left:auto;display:flex;gap:4px;}
+.view-btn{padding:5px 11px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;font-size:11px;}
+.view-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+/* SECTION */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.section-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
+.table-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.search-input{background:var(--card);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:4px;font-size:12px;width:180px;}
+.search-input:focus{outline:none;border-color:var(--blue);}
+.search-input::placeholder{color:var(--text3);}
+
+/* TABLE */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow-x:auto;margin-bottom:20px;}
+table{width:100%;border-collapse:collapse;}
+th{padding:9px 12px;text-align:left;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:var(--card2);white-space:nowrap;cursor:pointer;user-select:none;}
+th:hover{color:var(--text);}
+td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.02);}
+.td-name{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.td-desc{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:12px;}
+.td-amt{font-weight:600;text-align:right;white-space:nowrap;}
+.td-amt.inc{color:var(--green);}.td-amt.exp{color:var(--red);}
+.tfoot-row td{font-weight:600;border-top:1px solid var(--bord2);background:var(--card2);}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.03em;white-space:nowrap;}
+.b-exp{background:rgba(239,68,68,.15);color:var(--red);}
+.b-act{background:rgba(34,197,94,.15);color:var(--green);}
+.b-cat{background:rgba(79,144,245,.12);color:var(--blue);}
+.b-warn{background:rgba(245,158,11,.15);color:var(--yellow);}
+.b-inc{background:rgba(34,197,94,.12);color:var(--green);}
+
+/* BUTTONS */
+.btn{padding:5px 12px;border-radius:4px;border:none;cursor:pointer;font-size:12px;font-weight:500;transition:opacity .15s;white-space:nowrap;}
+.btn:hover{opacity:.85;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border);}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--red);}
+.btn-edit{background:rgba(79,144,245,.1);color:var(--blue);}
+.btn-sm{padding:3px 8px;font-size:11px;}
+.row-actions{display:flex;gap:5px;justify-content:flex-end;}
+.empty-state{text-align:center;padding:36px 20px;color:var(--text3);}
+.empty-icon{font-size:28px;margin-bottom:8px;}
+.empty-state p{font-size:12px;}
+
+/* SUBTABS */
+.subtabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:14px;}
+.subtab{padding:9px 18px;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-size:12px;font-weight:500;}
+.subtab:hover{color:var(--text);}
+.subtab.active{color:var(--blue);border-bottom-color:var(--blue);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--card2);border:1px solid var(--bord2);border-radius:10px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--border);}
+.modal-title{font-size:14px;font-weight:600;}
+.modal-close{background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;line-height:1;padding:0 4px;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:20px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:13px 20px;border-top:1px solid var(--border);}
+
+/* FORM */
+.form-group{margin-bottom:13px;}
+.form-label{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
+.form-control{width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:5px;font-size:13px;font-family:inherit;}
+.form-control:focus{outline:none;border-color:var(--blue);}
+select.form-control option{background:var(--card2);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* UPCOMING */
+.upcoming-list{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px;}
+.upcoming-item{display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border);gap:12px;}
+.upcoming-item:last-child{border-bottom:none;}
+.upcoming-day{font-size:16px;font-weight:700;color:var(--blue);min-width:28px;text-align:center;}
+.upcoming-info{flex:1;}
+.upcoming-name{font-size:13px;font-weight:500;}
+.upcoming-type{font-size:11px;color:var(--text2);}
+.upcoming-amount{font-size:13px;font-weight:600;white-space:nowrap;}
+
+/* DEBT PROGRESS */
+.debt-progress{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:4px;}
+.debt-bar{height:100%;background:var(--yellow);border-radius:2px;}
+
+/* BACKUP */
+.backup-section{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:14px;}
+.backup-section h3{font-size:12px;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em;}
+.backup-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.backup-note{font-size:11px;color:var(--text3);margin-top:10px;}
+textarea.data-area{width:100%;height:160px;background:var(--bg2);border:1px solid var(--border);color:var(--text2);font-size:11px;font-family:inherit;padding:10px;border-radius:5px;resize:vertical;margin-top:10px;}
+
+/* CONFIRM */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1001;display:flex;align-items:center;justify-content:center;}
+.confirm-overlay.hidden{display:none;}
+.confirm-box{background:var(--card2);border:1px solid var(--bord2);border-radius:8px;padding:24px;max-width:360px;width:90%;}
+.confirm-title{font-size:14px;font-weight:600;margin-bottom:8px;}
+.confirm-msg{font-size:12px;color:var(--text2);margin-bottom:20px;}
+.confirm-actions{display:flex;justify-content:flex-end;gap:8px;}
+
+/* RESPONSIVE */
+@media(max-width:900px){.charts-row.c2,.charts-row.c2b{grid-template-columns:1fr;}.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:580px){.kpi-grid{grid-template-columns:1fr 1fr;}.content{padding:12px;}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">&#128200; Finance</div>
+  <div class="nav-tab active" data-tab="overview">Overview</div>
+  <div class="nav-tab" data-tab="recurring">Recurring</div>
+  <div class="nav-tab" data-tab="onetime">One-Time</div>
+  <div class="nav-tab" data-tab="irregular">Irregular</div>
+  <div class="nav-tab" data-tab="debts">Debts</div>
+  <div class="nav-tab" data-tab="backup">Backup</div>
+</nav>
+
+<div class="content">
+
+<!-- OVERVIEW -->
+<div class="tab-pane active" id="tab-overview">
+  <div class="month-nav">
+    <button class="btn btn-secondary btn-sm" id="prev-month">&#8592;</button>
+    <div class="month-display" id="month-display"></div>
+    <button class="btn btn-secondary btn-sm" id="next-month">&#8594;</button>
+    <button class="btn btn-secondary btn-sm" id="go-today">Today</button>
+    <div class="view-toggle">
+      <button class="view-btn active" data-view="cash">Cash</button>
+      <button class="view-btn" data-view="smoothed">Smoothed</button>
+    </div>
+  </div>
+  <div class="kpi-grid" id="kpi-grid"></div>
+  <div class="charts-row c2">
+    <div class="chart-card">
+      <div class="chart-title">Income vs Expenses &mdash; 12 Months</div>
+      <div class="chart-wrap"><canvas id="chart-ie"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Expense Breakdown &mdash; <span id="breakdown-month-lbl"></span></div>
+      <div class="chart-wrap"><canvas id="chart-bd"></canvas></div>
+    </div>
+  </div>
+  <div class="charts-row c2b">
+    <div class="chart-card">
+      <div class="chart-title">Net Cashflow &mdash; 12 Months</div>
+      <div class="chart-wrap"><canvas id="chart-cf"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Debt Balances</div>
+      <div class="chart-wrap"><canvas id="chart-debt"></canvas></div>
+    </div>
+  </div>
+  <div class="section-header">
+    <div class="section-title">Upcoming Payments &mdash; <span id="upcoming-lbl"></span></div>
+  </div>
+  <div id="upcoming-list" class="upcoming-list"></div>
+</div>
+
+<!-- RECURRING -->
+<div class="tab-pane" id="tab-recurring">
+  <div class="subtabs">
+    <div class="subtab active" data-subtab="ri">Income</div>
+    <div class="subtab" data-subtab="re">Expenses</div>
+  </div>
+  <div class="subtab-pane active" id="subtab-ri">
+    <div class="section-header">
+      <div class="section-title">Recurring Income</div>
+      <div class="table-controls">
+        <input class="search-input" placeholder="Search..." data-filter="ri">
+        <button class="btn btn-primary" data-action="add" data-type="recurringIncome">+ Add</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th data-col="ri" data-key="name">Name</th>
+        <th>Description</th>
+        <th data-col="ri" data-key="amount">Amount</th>
+        <th data-col="ri" data-key="paymentDay">Day</th>
+        <th>Category</th>
+        <th>Period</th>
+        <th>Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="tbl-ri"></tbody>
+      <tfoot><tr class="tfoot-row">
+        <td colspan="2">Total (active this month)</td>
+        <td class="td-amt inc" id="sum-ri"></td>
+        <td colspan="5"></td>
+      </tr></tfoot>
+    </table></div>
+  </div>
+  <div class="subtab-pane" id="subtab-re">
+    <div class="section-header">
+      <div class="section-title">Recurring Expenses</div>
+      <div class="table-controls">
+        <input class="search-input" placeholder="Search..." data-filter="re">
+        <button class="btn btn-primary" data-action="add" data-type="recurringExpense">+ Add</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th data-col="re" data-key="name">Name</th>
+        <th>Description</th>
+        <th data-col="re" data-key="amount">Amount</th>
+        <th data-col="re" data-key="paymentDay">Day</th>
+        <th>Category</th>
+        <th>Period</th>
+        <th>Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="tbl-re"></tbody>
+      <tfoot><tr class="tfoot-row">
+        <td colspan="2">Total (active this month)</td>
+        <td class="td-amt exp" id="sum-re"></td>
+        <td colspan="5"></td>
+      </tr></tfoot>
+    </table></div>
+  </div>
+</div>
+
+<!-- ONE-TIME -->
+<div class="tab-pane" id="tab-onetime">
+  <div class="subtabs">
+    <div class="subtab active" data-subtab="oi">Income</div>
+    <div class="subtab" data-subtab="oe">Expenses</div>
+  </div>
+  <div class="subtab-pane active" id="subtab-oi">
+    <div class="section-header">
+      <div class="section-title">One-Time Income</div>
+      <div class="table-controls">
+        <input class="search-input" placeholder="Search..." data-filter="oi">
+        <button class="btn btn-primary" data-action="add" data-type="oneTimeIncome">+ Add</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Description</th><th>Amount</th><th>Date</th><th>Category</th><th></th></tr></thead>
+      <tbody id="tbl-oi"></tbody>
+      <tfoot><tr class="tfoot-row"><td colspan="2">Total</td><td class="td-amt inc" id="sum-oi"></td><td colspan="3"></td></tr></tfoot>
+    </table></div>
+  </div>
+  <div class="subtab-pane" id="subtab-oe">
+    <div class="section-header">
+      <div class="section-title">One-Time Expenses</div>
+      <div class="table-controls">
+        <input class="search-input" placeholder="Search..." data-filter="oe">
+        <button class="btn btn-primary" data-action="add" data-type="oneTimeExpense">+ Add</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Description</th><th>Amount</th><th>Date</th><th>Category</th><th></th></tr></thead>
+      <tbody id="tbl-oe"></tbody>
+      <tfoot><tr class="tfoot-row"><td colspan="2">Total</td><td class="td-amt exp" id="sum-oe"></td><td colspan="3"></td></tr></tfoot>
+    </table></div>
+  </div>
+</div>
+
+<!-- IRREGULAR -->
+<div class="tab-pane" id="tab-irregular">
+  <div class="section-header">
+    <div class="section-title">Irregular Payments</div>
+    <div class="table-controls">
+      <input class="search-input" placeholder="Search..." data-filter="irr">
+      <button class="btn btn-primary" data-action="add" data-type="irregular">+ Add</button>
+    </div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr>
+      <th>Name</th><th>Description</th><th>Amount</th>
+      <th>First Date</th><th>Frequency</th><th>Category</th>
+      <th>Type</th><th>End Date</th><th></th>
+    </tr></thead>
+    <tbody id="tbl-irr"></tbody>
+  </table></div>
+</div>
+
+<!-- DEBTS -->
+<div class="tab-pane" id="tab-debts">
+  <div class="section-header">
+    <div class="section-title">Loans &amp; Debts</div>
+    <div class="table-controls">
+      <input class="search-input" placeholder="Search..." data-filter="debt">
+      <button class="btn btn-primary" data-action="add" data-type="debt">+ Add</button>
+    </div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr>
+      <th>Name</th><th>Lender</th><th>Balance</th><th>Original</th>
+      <th>Min/Mo</th><th>Rate</th><th>Day</th><th>Progress</th><th></th>
+    </tr></thead>
+    <tbody id="tbl-debt"></tbody>
+    <tfoot><tr class="tfoot-row">
+      <td colspan="2">Totals</td>
+      <td class="td-amt exp" id="sum-debt-bal"></td>
+      <td class="td-amt" id="sum-debt-orig"></td>
+      <td class="td-amt exp" id="sum-debt-pay"></td>
+      <td colspan="4"></td>
+    </tr></tfoot>
+  </table></div>
+</div>
+
+<!-- BACKUP -->
+<div class="tab-pane" id="tab-backup">
+  <div class="backup-section">
+    <h3>Export Data</h3>
+    <div class="backup-actions">
+      <button class="btn btn-primary" id="btn-export">&#8595; Download JSON</button>
+      <button class="btn btn-secondary" id="btn-preview">Preview JSON</button>
+    </div>
+    <textarea class="data-area" id="json-preview" placeholder="Click Preview JSON to see your data..." readonly></textarea>
+  </div>
+  <div class="backup-section">
+    <h3>Import Data</h3>
+    <div class="backup-actions">
+      <label class="btn btn-secondary" style="cursor:pointer;">
+        &#8593; Choose File <input type="file" id="import-file" accept=".json" style="display:none;">
+      </label>
+      <button class="btn btn-secondary" id="btn-paste-import">Import from Paste</button>
+    </div>
+    <textarea class="data-area" id="import-paste" placeholder="Paste exported JSON here then click Import from Paste..."></textarea>
+  </div>
+  <div class="backup-section">
+    <h3>Manage</h3>
+    <div class="backup-actions">
+      <button class="btn btn-secondary" id="btn-seed">Load Sample Data</button>
+      <button class="btn btn-danger" id="btn-clear">Clear All Data</button>
+    </div>
+    <p class="backup-note">Sample data pre-fills the app so you can explore all features. Clearing removes everything from memory.</p>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- MODAL -->
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Edit</div>
+      <button class="modal-close" id="modal-close">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="confirm-overlay hidden" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Delete entry?</div>
+    <div class="confirm-msg">This will permanently remove the entry from memory. It cannot be undone.</div>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary" id="confirm-no">Cancel</button>
+      <button class="btn btn-danger" id="confirm-yes">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────
+const EXP_CATS  = ['Housing','Food','Utilities','Transportation','Health','Entertainment','Insurance','Shopping','Savings','Personal','Tax','Electronics','Other'];
+const INC_CATS  = ['Salary','Freelance','Investment','Benefits','Gifts','Other'];
+const ALL_CATS  = [...new Set([...EXP_CATS, ...INC_CATS])];
+const MONTHS    = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const CAT_COLORS= ['#4f90f5','#22c55e','#ef4444','#f59e0b','#a855f7','#f97316','#06b6d4','#ec4899','#84cc16','#14b8a6','#e879f9','#fb923c'];
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let state = {
+  recurringIncome: [],
+  recurringExpense: [],
+  oneTimeIncome: [],
+  oneTimeExpense: [],
+  irregularPayments: [],
+  debts: [],
+  settings: {
+    currency: 'EUR',
+    selectedMonth: new Date().getMonth(),
+    selectedYear:  new Date().getFullYear(),
+    viewMode: 'cash'
+  }
+};
+
+let charts       = {};
+let modalCtx     = { type: null, id: null };
+let confirmCb    = null;
+let sortState    = {};  // { colKey: { key, dir } }
+
+// ─────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────
+let _uidSeq = 1;
+function uid() { return 'id' + Date.now() + (_uidSeq++); }
+
+function fmt(n) {
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: state.settings.currency }).format(+n || 0);
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────────────
+// DATE LOGIC
+// ─────────────────────────────────────────────
+function isActive(item, month, year) {
+  const target = new Date(year, month, 1);
+  if (item.startDate) {
+    const s = new Date(item.startDate + 'T00:00:00');
+    if (new Date(s.getFullYear(), s.getMonth(), 1) > target) return false;
+  }
+  if (item.endDate) {
+    const e = new Date(item.endDate + 'T00:00:00');
+    if (new Date(e.getFullYear(), e.getMonth(), 1) < target) return false;
+  }
+  return true;
+}
+function isExpired(item) {
+  if (!item.endDate) return false;
+  const now = new Date();
+  const e   = new Date(item.endDate + 'T00:00:00');
+  return new Date(e.getFullYear(), e.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
+}
+function irregularHits(item, month, year) {
+  if (!item.firstDate) return false;
+  const first = new Date(item.firstDate + 'T00:00:00');
+  let period;
+  if      (item.periodUnit === 'yearly')    period = 12;
+  else if (item.periodUnit === 'quarterly') period = 3;
+  else                                       period = Math.max(1, +item.periodEvery || 1);
+  const abs0   = first.getFullYear() * 12 + first.getMonth();
+  const absT   = year * 12 + month;
+  if (absT < abs0) return false;
+  if (item.endDate) {
+    const e = new Date(item.endDate + 'T00:00:00');
+    if (absT > e.getFullYear() * 12 + e.getMonth()) return false;
+  }
+  return (absT - abs0) % period === 0;
+}
+function periodLabel(item) {
+  if (item.periodUnit === 'yearly')    return 'Yearly';
+  if (item.periodUnit === 'quarterly') return 'Quarterly';
+  const n = +item.periodEvery || 1;
+  return n === 1 ? 'Monthly' : `Every ${n} mo`;
+}
+
+// ─────────────────────────────────────────────
+// CALCULATIONS
+// ─────────────────────────────────────────────
+function calcMonth(month, year) {
+  let rI=0, rE=0, oI=0, oE=0, irI=0, irE=0;
+  state.recurringIncome.forEach(i  => { if (isActive(i,month,year)) rI += +i.amount; });
+  state.recurringExpense.forEach(i => { if (isActive(i,month,year)) rE += +i.amount; });
+  state.oneTimeIncome.forEach(i => {
+    if (!i.date) return;
+    const d = new Date(i.date+'T00:00:00');
+    if (d.getMonth()===month && d.getFullYear()===year) oI += +i.amount;
+  });
+  state.oneTimeExpense.forEach(i => {
+    if (!i.date) return;
+    const d = new Date(i.date+'T00:00:00');
+    if (d.getMonth()===month && d.getFullYear()===year) oE += +i.amount;
+  });
+  state.irregularPayments.forEach(i => {
+    if (!irregularHits(i,month,year)) return;
+    if (i.type==='income') irI += +i.amount; else irE += +i.amount;
+  });
+  const totalIncome  = rI + oI + irI;
+  const totalExpense = rE + oE + irE;
+  const debtPay      = state.debts.reduce((s,d)=>s+(+d.minimumPayment||0),0);
+  return { rI, rE, oI, oE, irI, irE, totalIncome, totalExpense, net: totalIncome-totalExpense, debtPay };
+}
+
+function calcSmoothed(month, year) {
+  const base = calcMonth(month, year);
+  // Replace actual irregular amounts with their normalized monthly share
+  let irSmooth = 0;
+  state.irregularPayments.forEach(i => {
+    let period;
+    if      (i.periodUnit==='yearly')    period=12;
+    else if (i.periodUnit==='quarterly') period=3;
+    else                                  period=Math.max(1,+i.periodEvery||1);
+    const monthly = +i.amount / period;
+    if (i.type==='income') irSmooth += monthly; else irSmooth -= monthly;
+  });
+  const irAdjust = irSmooth - (base.irI - base.irE);
+  return { ...base, totalIncome: base.totalIncome + Math.max(0,irSmooth), totalExpense: base.totalExpense + Math.max(0,-irSmooth), net: base.net + irAdjust };
+}
+
+function getCalcFn() {
+  return state.settings.viewMode === 'smoothed' ? calcSmoothed : calcMonth;
+}
+
+function get12Months() {
+  const res = [];
+  const sel = new Date(state.settings.selectedYear, state.settings.selectedMonth, 1);
+  const start = new Date(sel.getFullYear(), sel.getMonth()-3, 1);
+  for (let i=0;i<12;i++) {
+    const d = new Date(start.getFullYear(), start.getMonth()+i, 1);
+    res.push({ month: d.getMonth(), year: d.getFullYear() });
+  }
+  return res;
+}
+
+function getUpcoming(month, year) {
+  const list = [];
+  state.recurringIncome.forEach(i => {
+    if (isActive(i,month,year)) list.push({ day:+i.paymentDay||0, name:i.name, type:'Recurring Income', amount:+i.amount, inc:true });
+  });
+  state.recurringExpense.forEach(i => {
+    if (isActive(i,month,year)) list.push({ day:+i.paymentDay||0, name:i.name, type:'Recurring Expense', amount:+i.amount, inc:false });
+  });
+  state.oneTimeIncome.forEach(i => {
+    if (!i.date) return;
+    const d=new Date(i.date+'T00:00:00');
+    if (d.getMonth()===month&&d.getFullYear()===year) list.push({ day:d.getDate(), name:i.name, type:'One-Time Income', amount:+i.amount, inc:true });
+  });
+  state.oneTimeExpense.forEach(i => {
+    if (!i.date) return;
+    const d=new Date(i.date+'T00:00:00');
+    if (d.getMonth()===month&&d.getFullYear()===year) list.push({ day:d.getDate(), name:i.name, type:'One-Time Expense', amount:+i.amount, inc:false });
+  });
+  state.irregularPayments.forEach(i => {
+    if (!irregularHits(i,month,year)) return;
+    const d=new Date(i.firstDate+'T00:00:00');
+    list.push({ day:d.getDate(), name:i.name, type:`Irregular – ${i.category||''}`, amount:+i.amount, inc:i.type==='income' });
+  });
+  state.debts.forEach(i => {
+    list.push({ day:+i.paymentDay||0, name:i.name+' payment', type:'Debt Payment', amount:+i.minimumPayment, inc:false });
+  });
+  return list.sort((a,b)=>(a.day||99)-(b.day||99));
+}
+
+// ─────────────────────────────────────────────
+// RENDER: OVERVIEW
+// ─────────────────────────────────────────────
+function renderOverview() {
+  const { selectedMonth:m, selectedYear:y } = state.settings;
+  const calc = getCalcFn();
+  const d    = calc(m, y);
+  const totalDebt = state.debts.reduce((s,x)=>s+(+x.currentBalance||0),0);
+  const leftover  = d.net - d.debtPay;
+
+  $('#month-display').text(MONTHS[m]+' '+y);
+  $('#upcoming-lbl').text(MONTHS[m]+' '+y);
+  $('#breakdown-month-lbl').text(MONTHS[m]+' '+y);
+
+  const kpis = [
+    ['Monthly Income',   d.totalIncome,  'neu', `Recurring ${fmt(d.rI)} + OT ${fmt(d.oI)}`],
+    ['Monthly Expenses', d.totalExpense, 'neg', `Recurring ${fmt(d.rE)} + OT ${fmt(d.oE)}`],
+    ['Net Cashflow',     d.net,          d.net>=0?'pos':'neg', 'Income minus expenses'],
+    ['Debt Payments',    d.debtPay,      'neg', `${state.debts.length} active loan(s)`],
+    ['Projected Leftover', leftover,     leftover>=0?'pos':'neg', 'Net after debt obligations'],
+    ['Total Debt',       totalDebt,      'neg', `Across ${state.debts.length} item(s)`],
+  ];
+  $('#kpi-grid').html(kpis.map(([lbl,val,cls,sub])=>`
+    <div class="kpi-card">
+      <div class="kpi-label">${lbl}</div>
+      <div class="kpi-value ${cls}">${fmt(val)}</div>
+      <div class="kpi-sub">${sub}</div>
+    </div>`).join(''));
+
+  // Upcoming
+  const up = getUpcoming(m, y);
+  if (!up.length) {
+    $('#upcoming-list').html('<div class="empty-state"><div class="empty-icon">&#128197;</div><p>No payments found for this month.</p></div>');
+  } else {
+    $('#upcoming-list').html(up.map(i=>`
+      <div class="upcoming-item">
+        <div class="upcoming-day">${i.day||'—'}</div>
+        <div class="upcoming-info">
+          <div class="upcoming-name">${esc(i.name)}</div>
+          <div class="upcoming-type">${esc(i.type)}</div>
+        </div>
+        <div class="upcoming-amount ${i.inc?'inc':'exp'}">${i.inc?'+':'−'}${fmt(i.amount)}</div>
+      </div>`).join(''));
+  }
+}
+
+// ─────────────────────────────────────────────
+// RENDER: TABLES
+// ─────────────────────────────────────────────
+function filtered(arr, filterKey) {
+  const q = ($(`[data-filter="${filterKey}"]`).val()||'').toLowerCase();
+  if (!q) return arr;
+  return arr.filter(i => (i.name||'').toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q) || (i.description||'').toLowerCase().includes(q));
+}
+function sorted(arr, colKey) {
+  const ss = sortState[colKey];
+  if (!ss) return arr;
+  return [...arr].sort((a,b)=>{
+    const av = ss.key==='amount'||ss.key==='paymentDay'||ss.key==='minimumPayment' ? +a[ss.key] : (a[ss.key]||'');
+    const bv = ss.key==='amount'||ss.key==='paymentDay'||ss.key==='minimumPayment' ? +b[ss.key] : (b[ss.key]||'');
+    return av<bv?-ss.dir:av>bv?ss.dir:0;
+  });
+}
+function statusBadge(item) {
+  return isExpired(item)
+    ? '<span class="badge b-exp">Expired</span>'
+    : '<span class="badge b-act">Active</span>';
+}
+
+function renderRecurring(arr, tbodyId, sumId, type, colKey, isIncome) {
+  const { selectedMonth:m, selectedYear:y } = state.settings;
+  const rows = sorted(filtered(arr, colKey), colKey);
+  let total = 0;
+  if (!rows.length) {
+    $(`#${tbodyId}`).html(`<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">&#128203;</div><p>No entries. Click + Add to create one.</p></div></td></tr>`);
+  } else {
+    $(`#${tbodyId}`).html(rows.map(i => {
+      if (isActive(i,m,y) && !isExpired(i)) total += +i.amount;
+      return `<tr>
+        <td class="td-name">${esc(i.name)}</td>
+        <td class="td-desc">${esc(i.description)}</td>
+        <td class="td-amt ${isIncome?'inc':'exp'}">${fmt(+i.amount)}</td>
+        <td>${i.paymentDay||'—'}</td>
+        <td><span class="badge b-cat">${esc(i.category)}</span></td>
+        <td style="font-size:11px;color:var(--text2)">${i.startDate?fmtDate(i.startDate):'Any'} → ${i.endDate?fmtDate(i.endDate):'∞'}</td>
+        <td>${statusBadge(i)}</td>
+        <td><div class="row-actions">
+          <button class="btn btn-edit btn-sm" data-action="edit" data-type="${type}" data-id="${i.id}">Edit</button>
+          <button class="btn btn-danger btn-sm" data-action="delete" data-type="${type}" data-id="${i.id}">Del</button>
+        </div></td>
+      </tr>`;
+    }).join(''));
+  }
+  $(`#${sumId}`).text(fmt(total));
+}
+
+function renderOneTime(arr, tbodyId, sumId, type, filterKey, isIncome) {
+  const rows = filtered(arr, filterKey);
+  let total = 0;
+  if (!rows.length) {
+    $(`#${tbodyId}`).html(`<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">&#128184;</div><p>No entries.</p></div></td></tr>`);
+  } else {
+    $(`#${tbodyId}`).html(rows.map(i => {
+      total += +i.amount;
+      return `<tr>
+        <td class="td-name">${esc(i.name)}</td>
+        <td class="td-desc">${esc(i.description)}</td>
+        <td class="td-amt ${isIncome?'inc':'exp'}">${fmt(+i.amount)}</td>
+        <td>${fmtDate(i.date)}</td>
+        <td><span class="badge b-cat">${esc(i.category)}</span></td>
+        <td><div class="row-actions">
+          <button class="btn btn-edit btn-sm" data-action="edit" data-type="${type}" data-id="${i.id}">Edit</button>
+          <button class="btn btn-danger btn-sm" data-action="delete" data-type="${type}" data-id="${i.id}">Del</button>
+        </div></td>
+      </tr>`;
+    }).join(''));
+  }
+  $(`#${sumId}`).text(fmt(total));
+}
+
+function renderIrregular() {
+  const rows = filtered(state.irregularPayments, 'irr');
+  if (!rows.length) {
+    $('#tbl-irr').html(`<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">&#128260;</div><p>No irregular payments.</p></div></td></tr>`);
+    return;
+  }
+  $('#tbl-irr').html(rows.map(i=>`<tr>
+    <td class="td-name">${esc(i.name)}</td>
+    <td class="td-desc">${esc(i.description)}</td>
+    <td class="td-amt ${i.type==='income'?'inc':'exp'}">${fmt(+i.amount)}</td>
+    <td>${fmtDate(i.firstDate)}</td>
+    <td>${periodLabel(i)}</td>
+    <td><span class="badge b-cat">${esc(i.category)}</span></td>
+    <td><span class="badge ${i.type==='income'?'b-inc':'b-warn'}">${i.type}</span></td>
+    <td>${i.endDate?fmtDate(i.endDate):'∞'}</td>
+    <td><div class="row-actions">
+      <button class="btn btn-edit btn-sm" data-action="edit" data-type="irregular" data-id="${i.id}">Edit</button>
+      <button class="btn btn-danger btn-sm" data-action="delete" data-type="irregular" data-id="${i.id}">Del</button>
+    </div></td>
+  </tr>`).join(''));
+}
+
+function renderDebts() {
+  const rows = filtered(state.debts, 'debt');
+  let tBal=0, tOrig=0, tPay=0;
+  if (!rows.length) {
+    $('#tbl-debt').html(`<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">&#127970;</div><p>No debts tracked.</p></div></td></tr>`);
+    $('#sum-debt-bal,#sum-debt-orig,#sum-debt-pay').text(fmt(0));
+    return;
+  }
+  $('#tbl-debt').html(rows.map(i=>{
+    tBal  += +i.currentBalance;
+    tOrig += +i.originalAmount;
+    tPay  += +i.minimumPayment;
+    const pct = i.originalAmount>0 ? Math.min(100,(1-(+i.currentBalance/+i.originalAmount))*100) : 0;
+    return `<tr>
+      <td class="td-name">${esc(i.name)}<div class="td-desc" style="margin-top:2px">${esc(i.description)}</div></td>
+      <td>${esc(i.lender)}</td>
+      <td class="td-amt exp">${fmt(+i.currentBalance)}</td>
+      <td class="td-amt">${fmt(+i.originalAmount)}</td>
+      <td class="td-amt exp">${fmt(+i.minimumPayment)}</td>
+      <td>${i.interestRate?i.interestRate+'%':'—'}</td>
+      <td>${i.paymentDay||'—'}</td>
+      <td style="min-width:90px">
+        <div style="font-size:10px;color:var(--text2);margin-bottom:2px">${pct.toFixed(0)}% paid</div>
+        <div class="debt-progress"><div class="debt-bar" style="width:${pct}%"></div></div>
+      </td>
+      <td><div class="row-actions">
+        <button class="btn btn-edit btn-sm" data-action="edit" data-type="debt" data-id="${i.id}">Edit</button>
+        <button class="btn btn-danger btn-sm" data-action="delete" data-type="debt" data-id="${i.id}">Del</button>
+      </div></td>
+    </tr>`;
+  }).join(''));
+  $('#sum-debt-bal').text(fmt(tBal));
+  $('#sum-debt-orig').text(fmt(tOrig));
+  $('#sum-debt-pay').text(fmt(tPay));
+}
+
+function renderAll() {
+  renderOverview();
+  renderRecurring(state.recurringIncome,  'tbl-ri', 'sum-ri', 'recurringIncome',  'ri', true);
+  renderRecurring(state.recurringExpense, 'tbl-re', 'sum-re', 'recurringExpense', 're', false);
+  renderOneTime(state.oneTimeIncome,  'tbl-oi', 'sum-oi', 'oneTimeIncome',  'oi', true);
+  renderOneTime(state.oneTimeExpense, 'tbl-oe', 'sum-oe', 'oneTimeExpense', 'oe', false);
+  renderIrregular();
+  renderDebts();
+  updateCharts();
+}
+
+// ─────────────────────────────────────────────
+// CHARTS
+// ─────────────────────────────────────────────
+const CGRID = 'rgba(37,40,54,1)';
+const CTEXT = 'rgba(139,143,168,1)';
+
+function baseOpts(stacked) {
+  const scaleBase = {
+    ticks:{ color:CTEXT, font:{size:10} },
+    grid:{ color:CGRID }
+  };
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ labels:{ color:CTEXT, font:{size:11}, boxWidth:12 } } },
+    scales:{
+      x:{ ...scaleBase, stacked:!!stacked },
+      y:{ ...scaleBase, stacked:!!stacked, ticks:{ ...scaleBase.ticks, callback: v=>'€'+v.toLocaleString('de-DE') } }
+    }
+  };
+}
+
+function initCharts() {
+  Chart.defaults.color = CTEXT;
+  const months12 = get12Months();
+  const labels   = months12.map(m=>MONTHS[m.month].slice(0,3)+' '+m.year);
+  const calcFn   = getCalcFn();
+  const data12   = months12.map(m=>calcFn(m.month,m.year));
+
+  // Chart 1: Income vs Expense mixed
+  charts.ie = new Chart($('#chart-ie')[0], {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        { label:'Income',   type:'bar',  data:data12.map(d=>d.totalIncome),  backgroundColor:'rgba(34,197,94,.7)',  borderRadius:3 },
+        { label:'Expenses', type:'bar',  data:data12.map(d=>d.totalExpense), backgroundColor:'rgba(239,68,68,.7)', borderRadius:3 },
+        { label:'Net',      type:'line', data:data12.map(d=>d.net), borderColor:'#4f90f5', backgroundColor:'transparent', borderWidth:2, pointRadius:3, tension:.35 }
+      ]
+    },
+    options: baseOpts(false)
+  });
+
+  // Chart 2: Expense breakdown doughnut
+  const { cats:bdCats, vals:bdVals } = getCatBreakdown();
+  charts.bd = new Chart($('#chart-bd')[0], {
+    type:'doughnut',
+    data:{
+      labels: bdCats,
+      datasets:[{ data:bdVals, backgroundColor:CAT_COLORS, borderWidth:1, borderColor:'#161928' }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CTEXT, font:{size:10}, boxWidth:10 } } } }
+  });
+
+  // Chart 3: Net cashflow line
+  charts.cf = new Chart($('#chart-cf')[0], {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:'Net Cashflow',
+        data: data12.map(d=>d.net),
+        borderColor:'#4f90f5',
+        backgroundColor:'rgba(79,144,245,.12)',
+        fill:true, tension:.4, borderWidth:2, pointRadius:3
+      }]
+    },
+    options: baseOpts(false)
+  });
+
+  // Chart 4: Debt balances stacked bar
+  charts.debt = new Chart($('#chart-debt')[0], {
+    type:'bar',
+    data:{
+      labels: state.debts.map(d=>d.name),
+      datasets:[
+        { label:'Remaining', data:state.debts.map(d=>+d.currentBalance), backgroundColor:'rgba(239,68,68,.7)', borderRadius:3 },
+        { label:'Paid',      data:state.debts.map(d=>(+d.originalAmount)-(+d.currentBalance)), backgroundColor:'rgba(34,197,94,.7)', borderRadius:3 }
+      ]
+    },
+    options: baseOpts(true)
+  });
+}
+
+function getCatBreakdown() {
+  const { selectedMonth:m, selectedYear:y } = state.settings;
+  const map = {};
+  state.recurringExpense.forEach(i => {
+    if (isActive(i,m,y)) map[i.category||'Other'] = (map[i.category||'Other']||0) + +i.amount;
+  });
+  state.oneTimeExpense.forEach(i => {
+    if (!i.date) return;
+    const d=new Date(i.date+'T00:00:00');
+    if (d.getMonth()===m&&d.getFullYear()===y) map[i.category||'Other'] = (map[i.category||'Other']||0) + +i.amount;
+  });
+  state.irregularPayments.forEach(i => {
+    if (i.type!=='expense') return;
+    if (irregularHits(i,m,y)) map[i.category||'Other'] = (map[i.category||'Other']||0) + +i.amount;
+  });
+  return { cats: Object.keys(map), vals: Object.values(map) };
+}
+
+function updateCharts() {
+  if (!charts.ie) return;
+  const months12 = get12Months();
+  const labels   = months12.map(m=>MONTHS[m.month].slice(0,3)+' '+m.year);
+  const calcFn   = getCalcFn();
+  const data12   = months12.map(m=>calcFn(m.month,m.year));
+
+  charts.ie.data.labels = labels;
+  charts.ie.data.datasets[0].data = data12.map(d=>d.totalIncome);
+  charts.ie.data.datasets[1].data = data12.map(d=>d.totalExpense);
+  charts.ie.data.datasets[2].data = data12.map(d=>d.net);
+  charts.ie.update();
+
+  const { cats, vals } = getCatBreakdown();
+  charts.bd.data.labels = cats;
+  charts.bd.data.datasets[0].data = vals;
+  charts.bd.update();
+
+  charts.cf.data.labels = labels;
+  charts.cf.data.datasets[0].data = data12.map(d=>d.net);
+  charts.cf.update();
+
+  charts.debt.data.labels = state.debts.map(d=>d.name);
+  charts.debt.data.datasets[0].data = state.debts.map(d=>+d.currentBalance);
+  charts.debt.data.datasets[1].data = state.debts.map(d=>(+d.originalAmount)-(+d.currentBalance));
+  charts.debt.update();
+}
+
+// ─────────────────────────────────────────────
+// MODAL FIELD DEFINITIONS
+// ─────────────────────────────────────────────
+const FIELDS = {
+  recurringIncome: [
+    { k:'name',        lbl:'Name',                      t:'text',   req:true  },
+    { k:'description', lbl:'Description',               t:'text'              },
+    { k:'amount',      lbl:'Amount (EUR)',               t:'number', req:true  },
+    { k:'paymentDay',  lbl:'Payment Day (1-31, 0=varies)', t:'number'          },
+    { k:'category',    lbl:'Category',                  t:'sel',    opts:INC_CATS },
+    { k:'startDate',   lbl:'Start Date',                t:'date'              },
+    { k:'endDate',     lbl:'End Date (blank = ongoing)',t:'date'              },
+  ],
+  recurringExpense: [
+    { k:'name',        lbl:'Name',                      t:'text',   req:true  },
+    { k:'description', lbl:'Description',               t:'text'              },
+    { k:'amount',      lbl:'Amount (EUR)',               t:'number', req:true  },
+    { k:'paymentDay',  lbl:'Payment Day (1-31, 0=varies)', t:'number'          },
+    { k:'category',    lbl:'Category',                  t:'sel',    opts:EXP_CATS },
+    { k:'startDate',   lbl:'Start Date',                t:'date'              },
+    { k:'endDate',     lbl:'End Date (blank = ongoing)',t:'date'              },
+  ],
+  oneTimeIncome: [
+    { k:'name',        lbl:'Name',         t:'text',   req:true },
+    { k:'description', lbl:'Description',  t:'text'            },
+    { k:'amount',      lbl:'Amount (EUR)', t:'number', req:true },
+    { k:'date',        lbl:'Date',         t:'date',   req:true },
+    { k:'category',    lbl:'Category',     t:'sel',    opts:INC_CATS },
+  ],
+  oneTimeExpense: [
+    { k:'name',        lbl:'Name',         t:'text',   req:true },
+    { k:'description', lbl:'Description',  t:'text'            },
+    { k:'amount',      lbl:'Amount (EUR)', t:'number', req:true },
+    { k:'date',        lbl:'Date',         t:'date',   req:true },
+    { k:'category',    lbl:'Category',     t:'sel',    opts:EXP_CATS },
+  ],
+  irregular: [
+    { k:'name',        lbl:'Name',                         t:'text',   req:true  },
+    { k:'description', lbl:'Description',                  t:'text'              },
+    { k:'amount',      lbl:'Amount (EUR)',                  t:'number', req:true  },
+    { k:'firstDate',   lbl:'First Occurrence Date',         t:'date',   req:true  },
+    { k:'periodUnit',  lbl:'Frequency',                     t:'sel',    opts:['monthly','quarterly','yearly','custom'] },
+    { k:'periodEvery', lbl:'Every N months (custom only)',  t:'number'            },
+    { k:'type',        lbl:'Type',                          t:'sel',    opts:['expense','income'] },
+    { k:'category',    lbl:'Category',                      t:'sel',    opts:ALL_CATS },
+    { k:'endDate',     lbl:'End Date (optional)',            t:'date'              },
+  ],
+  debt: [
+    { k:'name',           lbl:'Name',                     t:'text',   req:true },
+    { k:'description',    lbl:'Description',              t:'text'             },
+    { k:'lender',         lbl:'Lender / Source',          t:'text'             },
+    { k:'originalAmount', lbl:'Original Amount (EUR)',    t:'number', req:true },
+    { k:'currentBalance', lbl:'Current Balance (EUR)',    t:'number', req:true },
+    { k:'minimumPayment', lbl:'Min. Monthly Payment (EUR)', t:'number', req:true },
+    { k:'paymentDay',     lbl:'Payment Day (1-31)',       t:'number'           },
+    { k:'interestRate',   lbl:'Interest Rate % (optional)', t:'number'         },
+    { k:'endDate',        lbl:'End / Due Date (optional)',  t:'date'           },
+  ],
+};
+
+const TYPE_LABELS = {
+  recurringIncome: 'Recurring Income',
+  recurringExpense: 'Recurring Expense',
+  oneTimeIncome: 'One-Time Income',
+  oneTimeExpense: 'One-Time Expense',
+  irregular: 'Irregular Payment',
+  debt: 'Debt / Loan',
+};
+
+function getArr(type) {
+  return {
+    recurringIncome:  state.recurringIncome,
+    recurringExpense: state.recurringExpense,
+    oneTimeIncome:    state.oneTimeIncome,
+    oneTimeExpense:   state.oneTimeExpense,
+    irregular:        state.irregularPayments,
+    debt:             state.debts,
+  }[type];
+}
+
+// ─────────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────────
+function openModal(type, id) {
+  const fields = FIELDS[type];
+  if (!fields) return;
+  modalCtx = { type, id: id||null };
+  const isEdit = !!id;
+  const item   = isEdit ? getArr(type).find(x=>x.id===id) : null;
+  $('#modal-title').text((isEdit?'Edit ':'New ')+TYPE_LABELS[type]);
+
+  const html = fields.map(f => {
+    const val = item ? (item[f.k]??'') : '';
+    if (f.t === 'sel') {
+      const opts = f.opts.map(o=>`<option value="${esc(o)}" ${String(val)===String(o)?'selected':''}>${esc(o)}</option>`).join('');
+      return `<div class="form-group"><label class="form-label">${esc(f.lbl)}</label><select class="form-control" name="${f.k}">${opts}</select></div>`;
+    }
+    return `<div class="form-group"><label class="form-label">${esc(f.lbl)}${f.req?' *':''}</label><input class="form-control" type="${f.t}" name="${f.k}" value="${esc(String(val))}" ${f.req?'required':''}></div>`;
+  }).join('');
+
+  $('#modal-body').html(`<form id="modal-form">${html}</form>`);
+  $('#modal-overlay').removeClass('hidden');
+}
+
+function closeModal() {
+  $('#modal-overlay').addClass('hidden');
+  modalCtx = { type:null, id:null };
+}
+
+function saveModal() {
+  const form = document.getElementById('modal-form');
+  if (!form.checkValidity()) { form.reportValidity(); return; }
+  const arr  = getArr(modalCtx.type);
+  const data = {};
+  $(form).serializeArray().forEach(({name,value})=>{ data[name]=value; });
+  if (modalCtx.id) {
+    const idx = arr.findIndex(x=>x.id===modalCtx.id);
+    if (idx>=0) arr[idx] = { ...arr[idx], ...data };
+  } else {
+    arr.push({ id:uid(), ...data });
+  }
+  closeModal();
+  renderAll();
+}
+
+function deleteItem(type, id) {
+  const arr = getArr(type);
+  const idx = arr.findIndex(x=>x.id===id);
+  if (idx>=0) arr.splice(idx,1);
+  renderAll();
+}
+
+function openConfirm(type, id) {
+  confirmCb = () => deleteItem(type, id);
+  $('#confirm-overlay').removeClass('hidden');
+}
+
+// ─────────────────────────────────────────────
+// IMPORT / EXPORT
+// ─────────────────────────────────────────────
+function exportData() {
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type:'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `finance-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON(json) {
+  try {
+    const data = JSON.parse(json);
+    if (!Array.isArray(data.recurringIncome)) throw new Error('Missing recurringIncome array — not a valid finance export.');
+    Object.assign(state, data);
+    renderAll();
+    alert('Data imported successfully.');
+  } catch(e) {
+    alert('Import failed: ' + e.message);
+  }
+}
+
+// ─────────────────────────────────────────────
+// SEED DATA
+// ─────────────────────────────────────────────
+function loadSeedData() {
+  const y = new Date().getFullYear();
+  state.recurringIncome = [
+    { id:uid(), name:'Main Salary',       description:'Net after taxes',          amount:3200, paymentDay:25, category:'Salary',    startDate:`${y}-01-01`, endDate:'' },
+    { id:uid(), name:'Freelance Side Work',description:'Design consulting',        amount:600,  paymentDay:1,  category:'Freelance',  startDate:`${y}-03-01`, endDate:`${y}-12-31` },
+  ];
+  state.recurringExpense = [
+    { id:uid(), name:'Rent',              description:'Monthly apartment rent',    amount:950,  paymentDay:1,  category:'Housing',       startDate:'', endDate:'' },
+    { id:uid(), name:'Electricity',       description:'Power & heating',           amount:85,   paymentDay:15, category:'Utilities',     startDate:'', endDate:'' },
+    { id:uid(), name:'Internet',          description:'Fiber 300 Mbps',            amount:39,   paymentDay:10, category:'Utilities',     startDate:'', endDate:'' },
+    { id:uid(), name:'Phone Plan',        description:'Mobile plan',               amount:22,   paymentDay:5,  category:'Utilities',     startDate:'', endDate:'' },
+    { id:uid(), name:'Groceries',         description:'Avg. monthly groceries',    amount:320,  paymentDay:0,  category:'Food',          startDate:'', endDate:'' },
+    { id:uid(), name:'Gym',               description:'FitLife membership',        amount:45,   paymentDay:3,  category:'Health',        startDate:'', endDate:'' },
+    { id:uid(), name:'Streaming',         description:'Netflix + Spotify',         amount:22,   paymentDay:12, category:'Entertainment', startDate:'', endDate:'' },
+    { id:uid(), name:'Health Insurance',  description:'Supplemental premium',      amount:120,  paymentDay:1,  category:'Insurance',     startDate:'', endDate:'' },
+  ];
+  state.oneTimeIncome = [
+    { id:uid(), name:'Tax Refund',        description:'2024 tax return',           amount:840,  date:`${y}-03-15`, category:'Benefits' },
+    { id:uid(), name:'Sold Laptop',       description:'Old MacBook on eBay',       amount:480,  date:`${y}-02-03`, category:'Other'    },
+  ];
+  state.oneTimeExpense = [
+    { id:uid(), name:'Sony Headphones',   description:'WH-1000XM5',               amount:280,  date:`${y}-01-20`, category:'Electronics' },
+    { id:uid(), name:'Dentist',           description:'Cleaning + X-ray',          amount:185,  date:`${y}-04-08`, category:'Health'      },
+  ];
+  state.irregularPayments = [
+    { id:uid(), name:'Car Insurance',     description:'Annual renewal',            amount:620, firstDate:`${y}-06-01`, periodUnit:'yearly',    periodEvery:1, endDate:'', category:'Insurance', type:'expense' },
+    { id:uid(), name:'Quarterly Tax',     description:'Estimated advance payment', amount:350, firstDate:`${y}-03-01`, periodUnit:'quarterly', periodEvery:3, endDate:'', category:'Tax',       type:'expense' },
+    { id:uid(), name:'Dividend',          description:'Stock dividend Q2+Q4',      amount:200, firstDate:`${y}-06-15`, periodUnit:'quarterly', periodEvery:3, endDate:'', category:'Investment', type:'income'  },
+  ];
+  state.debts = [
+    { id:uid(), name:'Car Loan',          description:'VW Golf financing',  lender:'Volksbank',  originalAmount:12000, currentBalance:7400, interestRate:4.5,  minimumPayment:280, paymentDay:5,  endDate:`${y+2}-12-01` },
+    { id:uid(), name:'Credit Card',       description:'Visa balance',       lender:'DKB Bank',   originalAmount:2000,  currentBalance:1150, interestRate:18.9, minimumPayment:50,  paymentDay:20, endDate:'' },
+    { id:uid(), name:'Personal Loan',     description:'Travel fund from friend', lender:'Max Müller', originalAmount:500, currentBalance:250, interestRate:0,   minimumPayment:50,  paymentDay:1,  endDate:`${y}-12-01` },
+  ];
+}
+
+// ─────────────────────────────────────────────
+// EVENT HANDLERS
+// ─────────────────────────────────────────────
+$(function() {
+  // Init
+  loadSeedData();
+  initCharts();
+  renderAll();
+
+  // Tab nav
+  $('.nav-tab').on('click', function() {
+    $('.nav-tab').removeClass('active');
+    $(this).addClass('active');
+    $('.tab-pane').removeClass('active');
+    $(`#tab-${$(this).data('tab')}`).addClass('active');
+  });
+
+  // Subtabs
+  $(document).on('click', '.subtab', function() {
+    const pane = $(this).closest('.tab-pane');
+    pane.find('.subtab').removeClass('active');
+    $(this).addClass('active');
+    pane.find('.subtab-pane').removeClass('active');
+    $(`#subtab-${$(this).data('subtab')}`).addClass('active');
+  });
+
+  // Month nav
+  $('#prev-month').on('click', () => {
+    if (--state.settings.selectedMonth < 0) { state.settings.selectedMonth=11; state.settings.selectedYear--; }
+    renderAll();
+  });
+  $('#next-month').on('click', () => {
+    if (++state.settings.selectedMonth > 11) { state.settings.selectedMonth=0; state.settings.selectedYear++; }
+    renderAll();
+  });
+  $('#go-today').on('click', () => {
+    const n = new Date();
+    state.settings.selectedMonth = n.getMonth();
+    state.settings.selectedYear  = n.getFullYear();
+    renderAll();
+  });
+
+  // View toggle
+  $('.view-btn').on('click', function() {
+    $('.view-btn').removeClass('active');
+    $(this).addClass('active');
+    state.settings.viewMode = $(this).data('view');
+    renderAll();
+  });
+
+  // CRUD buttons (delegated)
+  $(document).on('click', '[data-action="add"]',    function() { openModal($(this).data('type')); });
+  $(document).on('click', '[data-action="edit"]',   function() { openModal($(this).data('type'), $(this).data('id')); });
+  $(document).on('click', '[data-action="delete"]', function() { openConfirm($(this).data('type'), $(this).data('id')); });
+
+  // Column sort
+  $(document).on('click', 'th[data-col]', function() {
+    const col = $(this).data('col');
+    const key = $(this).data('key');
+    const cur = sortState[col];
+    sortState[col] = { key, dir: cur&&cur.key===key ? -cur.dir : 1 };
+    $(`th[data-col="${col}"]`).removeClass('sort-asc sort-desc');
+    $(this).addClass(sortState[col].dir===1?'sort-asc':'sort-desc');
+    renderAll();
+  });
+
+  // Search
+  $(document).on('input', '.search-input', () => renderAll());
+
+  // Modal
+  $('#modal-close, #modal-cancel').on('click', closeModal);
+  $('#modal-save').on('click', saveModal);
+  $('#modal-overlay').on('click', function(e) { if (e.target===this) closeModal(); });
+
+  // Confirm
+  $('#confirm-no').on('click',  () => $('#confirm-overlay').addClass('hidden'));
+  $('#confirm-yes').on('click', () => {
+    $('#confirm-overlay').addClass('hidden');
+    if (confirmCb) { confirmCb(); confirmCb=null; }
+  });
+
+  // Backup
+  $('#btn-export').on('click', exportData);
+  $('#btn-preview').on('click', () => { $('#json-preview').val(JSON.stringify(state, null, 2)); });
+  $('#import-file').on('change', function() {
+    const f = this.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = e => importJSON(e.target.result);
+    r.readAsText(f);
+  });
+  $('#btn-paste-import').on('click', () => {
+    const v = $('#import-paste').val().trim();
+    if (v) importJSON(v);
+    else alert('Paste your exported JSON into the text area first.');
+  });
+  $('#btn-seed').on('click', () => {
+    if (confirm('Load sample data? This will replace all current entries.')) {
+      loadSeedData(); renderAll();
+    }
+  });
+  $('#btn-clear').on('click', () => {
+    if (confirm('Clear ALL data? Everything will be wiped from memory.')) {
+      state.recurringIncome=[];state.recurringExpense=[];
+      state.oneTimeIncome=[];state.oneTimeExpense=[];
+      state.irregularPayments=[];state.debts=[];
+      renderAll();
+    }
+  });
+});
+</script>
+</body>
+</html>
